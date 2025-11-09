@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -90,4 +91,29 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+// kernel/sysproc.c
+uint64
+sys_trace(void) {
+  int mask;
+  argint(0, &mask);  // 获取用户传入的跟踪掩码
+  myproc()->tracemask = mask;  // 保存到当前进程的跟踪掩码
+  return 0;
+}
+
+uint64 free_mem(void);
+uint64 count_free_proc(void);
+// collect system info
+uint64
+sys_sysinfo(void){
+  struct proc *my_proc = myproc();
+  uint64 p;
+  argaddr(0, &p);
+  struct sysinfo s;
+  s.freemem = free_mem();
+  s.nproc = count_free_proc();
+  if(copyout(my_proc->pagetable, p, (char *)&s, sizeof(s)) < 0)
+    return -1;
+  return 0;
 }
